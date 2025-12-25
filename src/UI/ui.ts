@@ -1,4 +1,5 @@
 import type { PlanetarySystem } from "../Core/Models";
+import { Logger, type LogLevel } from "../Logger";
 
 type Handlers = {
   onStart: () => void;
@@ -44,6 +45,16 @@ export function buildUI(root: HTMLElement, h: Handlers) {
     <div class="field">
       <label>Time scale (прискорення)</label>
       <input id="ts" type="number" value="60" step="1" min="1" />
+    </div>
+
+    <div class="field">
+      <label>Рівень логів</label>
+      <select id="logLevel">
+        <option value="info">Info</option>
+        <option value="warn">Warn</option>
+        <option value="error">Error</option>
+        <option value="fatal">Fatal</option>
+      </select>
     </div>
 
     <hr/>
@@ -98,7 +109,7 @@ export function buildUI(root: HTMLElement, h: Handlers) {
     try {
       planets = JSON.parse(planetsText.value);
     } catch {
-      alert("Некоректний JSON у полі Планети.");
+      Logger.error("Invalid JSON for planets");
       return;
     }
 
@@ -113,5 +124,10 @@ export function buildUI(root: HTMLElement, h: Handlers) {
     };
 
     h.onApplyParams(sys);
+  };
+
+  const logLevelSelect = root.querySelector<HTMLSelectElement>("#logLevel")!;
+  logLevelSelect.onchange = () => {
+    Logger.setLevel(logLevelSelect.value as LogLevel);
   };
 }

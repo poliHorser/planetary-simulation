@@ -3,6 +3,7 @@ import type { PlanetarySystem, Planet, Star } from "./Models";
 import { materializeSystem } from "./Models";
 import type { OrbitStrategy, SimulationState } from "./Strategies";
 import { CircularOrbitStrategy } from "./Strategies";
+import { Logger } from "../Logger";
 
 export type EngineSnapshot = {
   system: PlanetarySystem;
@@ -34,36 +35,61 @@ export class SimulationEngine extends Subject<RenderPayload> {
     const m = materializeSystem(sys);
     this.state = { star: m.star, planets: m.planets, time: 0 };
     this.strategy.init?.(this.state);
+    Logger.info("System configured", { planets: sys.planets.map(p => p.name) });
   }
 
   setStrategy(strategy: OrbitStrategy) {
     this.strategy = strategy;
-    // переініціалізувати швидкості під нову стратегію
-    this.strategy.init?.(this.state);
+    try {
+      this.strategy.init?.(this.state);
+      Logger.info("Strategy changed", { strategy: strategy.name });
+    } catch (e) {
+      Logger.error("Failed to initialize strategy", { error: e });
+    }
     this.notify();
   }
 
-  setDt(dt: number) { this.dt = Math.max(dt, 0.001); }
-  setTimeScale(ts: number) { this.timeScale = Math.max(ts, 1); }
+  setDt(dt: number) { 
+    this.dt = Math.max(dt, 0.001); 
+    Logger.info("Time step changed", { dt: this.dt });
+  }
 
-  start() { this.running = true; }
-  pause() { this.running = false; }
+  setTimeScale(ts: number) { 
+    this.timeScale = Math.max(ts, 1); 
+    Logger.info("Time scale changed", { timeScale: this.timeScale });
+  }
+
+  start() { 
+    this.running = true; 
+    Logger.info("Simulation started", { timeScale: this.timeScale, dt: this.dt });
+  }
+
+  pause() { 
+    this.running = false; 
+    Logger.info("Simulation paused", { time: this.state.time });
+  }
 
   step() {
-    // один крок (як у твоєму "Simulation Step Cycle")
-    this.strategy.step(this.state, this.dt);
-    this.notify();
+    try {
+      this.strategy.step(this.state, this.dt);
+      Logger.info("Simulation step executed", { time: this.state.time });
+      this.notify();
+    } catch (e) {
+      Logger.error("Error during simulation step", { error: e });
+    }
   }
 
   tick() {
     if (!this.running) return;
-
-    // робимо кілька кроків за кадр залежно від timeScale
     const steps = Math.max(1, Math.floor(this.timeScale * this.dt));
     const subDt = this.dt;
 
     for (let i = 0; i < steps; i++) {
-      this.strategy.step(this.state, subDt);
+      try {
+        this.strategy.step(this.state, subDt);
+      } catch (e) {
+        Logger.error("Error during simulation tick step", { error: e, step: i });
+      }
     }
     this.notify();
   }
@@ -73,7 +99,11 @@ export class SimulationEngine extends Subject<RenderPayload> {
   }
 
   snapshot(): EngineSnapshot {
-    if (!this.systemConfig) throw new Error("No system configured");
+    if (!this.systemConfig) {
+      Logger.error("Cannot create snapshot: system not configured");
+      throw new Error("No system configured");
+    }
+
     return {
       system: this.systemConfig,
       time: this.state.time,
@@ -88,19 +118,21 @@ export class SimulationEngine extends Subject<RenderPayload> {
   }
 
   loadSnapshot(s: EngineSnapshot) {
-    this.setSystem(s.system);
-    this.setDt(s.dt);
-    this.setTimeScale(s.timeScale);
+    try {
+      this.setSystem(s.system);
+      this.setDt(s.dt);
+      this.setTimeScale(s.timeScale);
 
-    // стратегію виставляє UI, але тут теж підтримаємо
-    // (щоб відновлення працювало)
-    // імпорт циклічний не робимо — UI і так смикає setStrategy.
-    this.state.time = s.time;
-    this.state.planets.forEach((p, i) => {
-      p.position = { ...s.planetsState[i].position };
-      p.velocity = { ...s.planetsState[i].velocity };
-    });
+      this.state.time = s.time;
+      this.state.planets.forEach((p, i) => {
+        p.position = { ...s.planetsState[i].position };
+        p.velocity = { ...s.planetsState[i].velocity };
+      });
 
-    this.notify();
+      Logger.info("Snapshot loaded", { time: s.time });
+      this.notify();
+    } catch (e) {
+      Logger.error("Failed to load snapshot", { error: e });
+    }
   }
 }

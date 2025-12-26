@@ -17,7 +17,7 @@ type Handlers = {
 export function buildUI(root: HTMLElement, h: Handlers) {
   root.innerHTML = `
     <h2>Orbital Dynamics Simulator</h2>
-    <div class="small">Параметри + керування симуляцією (UI → Core)</div>
+   
     <hr/>
 
     <div class="field">

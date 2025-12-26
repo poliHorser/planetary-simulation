@@ -33,7 +33,6 @@ export class Logger {
       meta
     };
     console.log(JSON.stringify(entry));
-    // TODO: можна додати запис у файл або localStorage
   }
 
   static info(msg: string, meta?: any) { this.log("info", msg, meta); }

@@ -31,11 +31,10 @@ export function createDefaultSystem(): PlanetarySystem {
 }
 
 export function materializeSystem(sys: PlanetarySystem): { star: Star; planets: Planet[] } {
-  // Початково ставимо планети на осі X, швидкість — по Y (для кругової орбіти)
   const planets: Planet[] = sys.planets.map((p, i) => ({
     ...p,
     position: v2(p.orbitRadius, 0),
-    velocity: v2(0, 0) // буде задано стратегією (або 0 і далі "newton" розкрутить при старті)
+    velocity: v2(0, 0) 
   }));
   return { star: sys.star, planets };
 }

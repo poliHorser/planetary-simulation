@@ -10,9 +10,7 @@ export type SimulationState = {
 
 export interface OrbitStrategy {
   readonly name: string;
-  // один крок симуляції
   step(state: SimulationState, dt: number): void;
-  // опціонально — ініціалізація швидкостей
   init?(state: SimulationState): void;
 }
 
@@ -34,13 +32,10 @@ export class CircularOrbitStrategy implements OrbitStrategy {
 
   step(state: SimulationState, dt: number): void {
     for (const p of state.planets) {
-      // для кругової орбіти просто інтегруємо v
       p.position = add(p.position, mul(p.velocity, dt));
-      // легка корекція на радіус (щоб не "розпливалося")
       const r = len(p.position);
       const dir = norm(p.position);
       p.position = mul(dir, p.orbitRadius);
-      // швидкість перпендикулярна радіус-вектору
       const vmag = Math.sqrt((G * state.star.mass) / p.orbitRadius);
       p.velocity = v2(-dir.y * vmag, dir.x * vmag);
     }
@@ -59,7 +54,7 @@ export class NewtonEulerStrategy implements OrbitStrategy {
     for (const p of state.planets) {
       const v = Math.sqrt((G * state.star.mass) / p.orbitRadius);
       p.position = v2(p.orbitRadius, 0);
-      p.velocity = v2(0, v); // стартуємо з приблизно кругової
+      p.velocity = v2(0, v);
     }
   }
 
